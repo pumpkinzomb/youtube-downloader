@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100">
+  <!-- Background -->
+  <rect width="300" height="100" fill="#F9F9F9" rx="10" ry="10"/>
+  <!-- YouTube icon -->
+  <circle cx="50" cy="50" r="35" fill="#FF0000"/>
+  <polygon points="40,35 40,65 65,50" fill="#FFFFFF"/>
+  <!-- Text "YOUTUBE DOWNLOADER" -->
+  <text x="160" y="45" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#333333" text-anchor="middle">
+    YOUTUBE
+  </text>
+  <text x="190" y="75" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#FF0000" text-anchor="middle">
+    DOWNLOADER
+  </text>
+</svg>
