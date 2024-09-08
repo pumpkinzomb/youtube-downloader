@@ -121,7 +121,8 @@ app.get("*", (req, res) => {
 
 portfinder
   .getPortPromise()
-  .then(async (port) => {
+  .then(async (emptyPort) => {
+    const port = process.env.PORT || emptyPort;
     app.listen(port, () => {
       log("info", `Server running at http://localhost:${port}`);
     });
