@@ -2,9 +2,9 @@
 
 ## Description
 
-Recently, YouTube download services have been hurting the user experience with excessive advertisements. As an alternative, we have created a service that allows users to download YouTube videos neatly without advertisements.
+Recently, YouTube download services have been hurting the user experience with excessive advertisements. As an alternative, I have created a service that allows users to download YouTube videos neatly without advertisements.
 
-This project makes it easy for users to download YouTube videos of their choice in various formats. Without ads or unnecessary pop-ups, we focused purely on downloading features.
+This project makes it easy for users to download YouTube videos of their choice in various formats. Without ads or unnecessary pop-ups, I focused purely on downloading features.
 
 ## Prerequisites
 
