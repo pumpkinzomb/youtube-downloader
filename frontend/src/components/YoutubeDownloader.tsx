@@ -148,7 +148,7 @@ const YouTubeDownloader: React.FC = () => {
                 fontSize: "16px",
               }}
             >
-              Download Video
+              {`Download ${format}`}
             </Button>
           )}
         </Stack>
