@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config(); // .env 파일 로드
-import express from "express";
-import fs, { createReadStream } from "fs";
+import express, { ErrorRequestHandler } from "express";
+import fs from "fs";
+import { pipeline } from "stream";
 import portfinder from "portfinder";
 import mime from "mime-types";
 import path from "path";
@@ -12,6 +13,11 @@ import log from "./logger";
 
 const app = express();
 const downloadDir = path.join(__dirname, "downloads");
+
+const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send("Something broke!");
+};
 
 // React 빌드 파일 경로 설정
 const reactBuildPath = path.join(__dirname, "../frontend", "build");
@@ -89,12 +95,13 @@ app.get("/api/stream/:fileName", (req, res) => {
   );
   const contentDisposition = `attachment; filename*=UTF-8''${encodedFileName}`;
 
+  // 범위 요청 처리
   if (range) {
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
     const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
     const chunksize = end - start + 1;
-    const file = createReadStream(filePath, { start, end });
+
     const head = {
       "Content-Range": `bytes ${start}-${end}/${fileSize}`,
       "Accept-Ranges": "bytes",
@@ -103,17 +110,33 @@ app.get("/api/stream/:fileName", (req, res) => {
       "Content-Disposition": contentDisposition,
     };
     res.writeHead(206, head);
-    file.pipe(res);
+
+    const fileStream = fs.createReadStream(filePath, { start, end });
+    pipeline(fileStream, res, (err) => {
+      if (err) {
+        console.error("Pipeline failed:", err);
+      }
+    });
   } else {
     const head = {
       "Content-Length": fileSize,
       "Content-Type": mimeType,
       "Content-Disposition": contentDisposition,
+      "Accept-Ranges": "bytes",
     };
     res.writeHead(200, head);
-    createReadStream(filePath).pipe(res);
+
+    const fileStream = fs.createReadStream(filePath);
+    pipeline(fileStream, res, (err) => {
+      if (err) {
+        console.error("Pipeline failed:", err);
+      }
+    });
   }
 });
+
+// 에러 핸들링 미들웨어
+app.use(errorHandler);
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(reactBuildPath, "index.html"));
