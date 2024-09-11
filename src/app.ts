@@ -8,8 +8,11 @@ import mime from "mime-types";
 import path from "path";
 import cors from "cors";
 import schedule from "node-schedule";
+import { promisify } from "util";
 import { downloadVideo, cleanupOldFiles } from "./utils";
 import log from "./logger";
+
+const pipelineAsync = promisify(pipeline);
 
 const app = express();
 const downloadDir = path.join(__dirname, "downloads");
@@ -73,65 +76,93 @@ app.post("/api/downloads", async (req, res) => {
 });
 
 // 파일 스트리밍을 위한 엔드포인트
-app.get("/api/stream/:fileName", (req, res) => {
-  const fileName = decodeURIComponent(req.params.fileName);
-  const filePath = path.join(downloadDir, fileName);
+app.get("/api/stream/:fileName", async (req, res, next) => {
+  let isStreamEnded = false;
 
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).json({ error: "File not found" });
-  }
+  // 스트림 종료 이벤트 리스너
+  const endListener = () => {
+    isStreamEnded = true;
+  };
 
-  const stat = fs.statSync(filePath);
-  const fileSize = stat.size;
-  const range = req.headers.range;
+  res.on("close", endListener);
 
-  // MIME 타입 결정
-  const mimeType = mime.lookup(filePath) || "application/octet-stream";
+  try {
+    const fileName = decodeURIComponent(req.params.fileName);
+    const filePath = path.join(downloadDir, fileName);
 
-  // 파일 이름 인코딩
-  const encodedFileName = encodeURIComponent(fileName).replace(
-    /['()]/g,
-    (c) => "%" + c.charCodeAt(0).toString(16)
-  );
-  const contentDisposition = `attachment; filename*=UTF-8''${encodedFileName}`;
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: "File not found" });
+    }
 
-  // 범위 요청 처리
-  if (range) {
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const stat = await fs.promises.stat(filePath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    const mimeType = mime.lookup(filePath) || "application/octet-stream";
+
+    const encodedFileName = encodeURIComponent(fileName).replace(
+      /['()]/g,
+      (c) => "%" + c.charCodeAt(0).toString(16)
+    );
+    const contentDisposition = `attachment; filename*=UTF-8''${encodedFileName}`;
+
+    let start = 0;
+    let end = fileSize - 1;
+    let statusCode = 200;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, "").split("-");
+      start = parseInt(parts[0], 10);
+      end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      statusCode = 206;
+    }
+
     const chunksize = end - start + 1;
 
-    const head = {
+    const headers = {
       "Content-Range": `bytes ${start}-${end}/${fileSize}`,
       "Accept-Ranges": "bytes",
       "Content-Length": chunksize,
       "Content-Type": mimeType,
       "Content-Disposition": contentDisposition,
     };
-    res.writeHead(206, head);
 
-    const fileStream = fs.createReadStream(filePath, { start, end });
-    pipeline(fileStream, res, (err) => {
-      if (err) {
-        console.error("Pipeline failed:", err);
+    res.writeHead(statusCode, headers);
+
+    const streamFile = async (attempt = 0) => {
+      try {
+        const fileStream = fs.createReadStream(filePath, {
+          start,
+          end,
+          highWaterMark: 64 * 1024,
+        });
+
+        await pipelineAsync(fileStream, res);
+      } catch (error) {
+        if (attempt < 2 && !isStreamEnded) {
+          // 최대 3번 시도 (초기 + 2번 재시도)
+          console.log(`Attempt ${attempt + 1} failed. Retrying...`);
+          await new Promise((resolve) =>
+            setTimeout(resolve, 1000 * Math.pow(2, attempt))
+          );
+          return streamFile(attempt + 1);
+        }
+        throw error;
       }
-    });
-  } else {
-    const head = {
-      "Content-Length": fileSize,
-      "Content-Type": mimeType,
-      "Content-Disposition": contentDisposition,
-      "Accept-Ranges": "bytes",
     };
-    res.writeHead(200, head);
 
-    const fileStream = fs.createReadStream(filePath);
-    pipeline(fileStream, res, (err) => {
-      if (err) {
-        console.error("Pipeline failed:", err);
+    await streamFile();
+  } catch (error) {
+    if (!res.headersSent) {
+      next(error);
+    } else {
+      console.error("Streaming error:", error);
+      if (!isStreamEnded) {
+        res.destroy();
       }
-    });
+    }
+  } finally {
+    res.removeListener("close", endListener);
   }
 });
 
