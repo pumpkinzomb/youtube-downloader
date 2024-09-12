@@ -74,12 +74,15 @@ const YouTubeDownloader: React.FC = () => {
       sx={{
         width: "100vw",
         height: "100vh",
+        padding: 2,
       }}
       justifyContent={"center"}
       alignItems={"center"}
     >
-      <Box sx={{ width: "500px" }}>
-        <Logo style={{ width: "500px", marginBottom: "20px" }} />
+      <Box sx={{ maxWidth: "400px", width: "100%" }}>
+        <Logo
+          style={{ maxWidth: "400px", width: "100%", marginBottom: "20px" }}
+        />
         <form onSubmit={handleSubmit}>
           <Stack flexDirection={"row"} gap={1}>
             <TextField
@@ -90,7 +93,9 @@ const YouTubeDownloader: React.FC = () => {
               onChange={(e) => setUrl(e.target.value)}
               margin="normal"
               sx={{
-                minWidth: "400px",
+                maxWidth: "400px",
+                minWidth: "280px",
+                width: "100%",
               }}
             />
             <FormControl fullWidth margin="normal">
