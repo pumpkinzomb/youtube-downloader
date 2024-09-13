@@ -31,7 +31,6 @@ if (!fs.existsSync(downloadDir)) {
   log("info", "Default Downloads directory created");
 }
 
-app.use(express.static(reactBuildPath));
 app.use("/api", express.json());
 app.use(
   "/api",
@@ -169,6 +168,8 @@ app.get("/api/stream/:fileName", async (req, res, next) => {
 // 에러 핸들링 미들웨어
 app.use(errorHandler);
 
+app.use(express.static(reactBuildPath));
+
 app.get("*", (req, res) => {
   res.sendFile(path.join(reactBuildPath, "index.html"));
 });
@@ -176,8 +177,8 @@ app.get("*", (req, res) => {
 portfinder
   .getPortPromise()
   .then(async (emptyPort) => {
-    const port = process.env.PORT || emptyPort;
-    app.listen(port, () => {
+    const port = Number(process.env.PORT) || emptyPort;
+    app.listen(port, "0.0.0.0", () => {
       log("info", `Server running at http://localhost:${port}`);
     });
   })
