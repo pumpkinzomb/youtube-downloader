@@ -59,9 +59,9 @@ app.post("/api/downloads", async (req, res) => {
       throw new Error(`File not found: ${filePath}`);
     }
 
-    const fileUrl = `${req.protocol}://${req.get(
-      "host"
-    )}/api/stream/${encodeURIComponent(fileName)}`;
+    const fileUrl = `${
+      process.env.SERVER_DOMAIN
+    }/api/stream/${encodeURIComponent(fileName)}`;
 
     res.status(200).json({
       message: "Download successful",
