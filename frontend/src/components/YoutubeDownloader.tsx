@@ -36,10 +36,13 @@ const YouTubeDownloader: React.FC = () => {
   const [downloadLink, setDownloadLink] = useState("");
 
   const getDownloadUrl = async (url: string, format: string) => {
-    const response = await axios.post("/api/downloads", {
-      url,
-      format,
-    });
+    const response = await axios.post(
+      `${process.env.REACT_APP_API_ENDPOINT}/api/downloads`,
+      {
+        url,
+        format,
+      }
+    );
     return response.data;
   };
 
