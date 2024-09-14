@@ -37,7 +37,7 @@ const YouTubeDownloader: React.FC = () => {
 
   const getDownloadUrl = async (url: string, format: string) => {
     const response = await axios.post(
-      `${process.env.REACT_APP_API_ENDPOINT}/api/downloads`,
+      `${process.env.REACT_APP_API_ENDPOINT}/download`,
       {
         url,
         format,
@@ -47,10 +47,22 @@ const YouTubeDownloader: React.FC = () => {
   };
 
   const extractVideoId = (url: string) => {
-    const regExp =
-      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return match && match[2].length === 11 ? match[2] : null;
+    const urlObj = new URL(url);
+    return urlObj.searchParams.get("v");
+  };
+
+  const isValidYouTubeUrl = (url: string): boolean => {
+    try {
+      const urlObj = new URL(url);
+      return (
+        (urlObj.hostname === "www.youtube.com" ||
+          urlObj.hostname === "youtube.com") &&
+        urlObj.pathname === "/watch" &&
+        urlObj.searchParams.has("v")
+      );
+    } catch (error) {
+      return false;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,6 +70,13 @@ const YouTubeDownloader: React.FC = () => {
     setIsLoading(true);
     setError("");
     setDownloadLink("");
+
+    if (!isValidYouTubeUrl(url)) {
+      setError("Invalid YouTube URL. Please enter a valid YouTube video URL.");
+      setIsLoading(false);
+      return;
+    }
+
     const videoId = extractVideoId(url);
     setThumbnail(videoId ? `https://img.youtube.com/vi/${videoId}/0.jpg` : "");
 

@@ -41,7 +41,7 @@ app.use(
   })
 );
 
-app.post("/api/downloads", async (req, res) => {
+app.post("/api/download", async (req, res) => {
   try {
     const { url, format } = req.body;
 
@@ -178,7 +178,7 @@ portfinder
   .getPortPromise()
   .then(async (emptyPort) => {
     const port = Number(process.env.PORT) || emptyPort;
-    app.listen(port, "0.0.0.0", () => {
+    app.listen(port, () => {
       log("info", `Server running at http://localhost:${port}`);
     });
   })
